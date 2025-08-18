@@ -56,15 +56,14 @@ export function QuoteModal({ isOpen, onClose, filterCategory, quotes = [], isLoa
                 ))}
               </div>
             ) : displayQuotes.length > 0 ? (
-              displayQuotes.map((quote, index) => (
+              displayQuotes.map((quote) => (
                 <div
                   key={quote.id}
-                  className="group p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-left-2"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-colors duration-200"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <blockquote className="text-base leading-relaxed mb-3 text-foreground">"{quote.text}"</blockquote>
+                      <blockquote className="text-base leading-relaxed mb-3">"{quote.text}"</blockquote>
                       <p className="font-medium text-blue-600 text-sm">— {quote.author}</p>
                     </div>
                     <div className="text-right">

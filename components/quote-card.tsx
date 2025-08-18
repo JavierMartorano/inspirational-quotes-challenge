@@ -12,18 +12,18 @@ interface QuoteCardProps {
 
 export function QuoteCard({ quote, onMoreClick }: QuoteCardProps) {
   return (
-    <Card className="group h-full min-h-[280px] transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:scale-[1.02]">
+    <Card className="h-full min-h-[280px] transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
       <CardContent className="p-6 h-full flex flex-col">
         <div className="flex-1">
-          <Quote className="h-8 w-8 text-blue-600 mb-4 transition-transform duration-300 group-hover:scale-110" />
-          <blockquote className="text-lg leading-relaxed mb-4 transition-colors duration-300">
+          <Quote className="h-8 w-8 text-blue-600 mb-4" />
+          <blockquote className="text-lg leading-relaxed mb-4">
             "{quote.text}"
           </blockquote>
         </div>
 
         <div className="space-y-3">
           <div>
-            <p className="font-semibold text-blue-600 transition-colors duration-300">— {quote.author}</p>
+            <p className="font-semibold text-blue-600">— {quote.author}</p>
             <p className="text-sm text-muted-foreground capitalize">{quote.category}</p>
           </div>
 
@@ -31,7 +31,7 @@ export function QuoteCard({ quote, onMoreClick }: QuoteCardProps) {
             variant="outline"
             size="sm"
             onClick={() => onMoreClick(quote.category)}
-            className="w-full transition-all duration-300 hover:bg-blue-600 hover:text-white hover:scale-105"
+            className="w-full hover:bg-blue-600 hover:text-white"
           >
             Más
           </Button>

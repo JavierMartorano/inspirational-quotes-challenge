@@ -132,14 +132,8 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
-              {displayedQuotes.map((quote, index) => (
-                <div
-                  key={quote.id}
-                  className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <QuoteCard quote={quote} onMoreClick={handleMoreClick} />
-                </div>
+              {displayedQuotes.map((quote) => (
+                <QuoteCard key={quote.id} quote={quote} onMoreClick={handleMoreClick} />
               ))}
             </div>
           )}
