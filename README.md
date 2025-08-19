@@ -11,6 +11,8 @@
 
 Esta aplicación es una landing page que muestra citas inspiracionales organizadas en "bricks" (tarjetas). Cada brick contiene una cita, su autor y una palabra clave. Los usuarios pueden hacer clic en "more" para ver más citas relacionadas con esa palabra clave.
 
+> Nota de rama (with-apikey): Esta rama está orientada al challenge técnico y sigue la documentación oficial de ZenQuotes. Soporta una API key opcional mediante la variable de entorno `ZENQUOTES_API_KEY`. Si no se configura, la app funciona con el modo público y aplica fallbacks locales cuando sea necesario, respetando los límites de la API.
+
 ### ✨ Características Principales
 
 - 🎯 **Landing con Bricks**: Cada tarjeta muestra una cita con su palabra clave
@@ -42,12 +44,20 @@ Esta aplicación es una landing page que muestra citas inspiracionales organizad
    npm install
    ```
 
-3. **Ejecutar en modo desarrollo**
+3. **Configurar variables de entorno (opcional pero recomendado)**
+   Crea un archivo `.env.local` en la raíz del proyecto con tu API key de ZenQuotes:
+   ```bash
+   ZENQUOTES_API_KEY=tu_api_key_de_zenquotes
+   ```
+   - La app detecta esta key en servidor y la añade a las llamadas oficiales: `https://zenquotes.io/api/[mode]/[key]?...`.
+   - Si no defines la key, se usará el modo público con límites por IP y se aplicarán fallbacks locales en caso de error.
+
+4. **Ejecutar en modo desarrollo**
    ```bash
    npm run dev
    ```
 
-4. **Abrir en el navegador**
+5. **Abrir en el navegador**
    ```
    http://localhost:3000
    ```
@@ -113,16 +123,17 @@ inspirational-quotes-challenge/
 
 ### Endpoints Internos
 
-- **GET `/api/quotes`** - Obtiene citas aleatorias
-- **GET `/api/qod`** - Obtiene la cita del día (JSON)
-- **GET `/qod`** - Cita del día en texto plano
-- **GET `/qod-ui`** - Interfaz de la cita del día
+- **GET `/api/quotes`** — Obtiene citas (aleatorias o filtradas con `?keyword=`). Devuelve hasta 10 resultados por llamada. Internamente consulta el endpoint oficial `https://zenquotes.io/api/quotes/[API_KEY]?keyword=...` y aplica fallback a citas locales si hay error.
+- **GET `/api/qod`** — Obtiene la cita del día en formato `text/plain`. Usa `https://zenquotes.io/api/today/[API_KEY]` y cachea por día con cookies.
+- **GET `/qod`** — Cita del día en texto plano (`text/plain`) pensada para integraciones externas.
+- **GET `/qod-ui`** — Interfaz visual de la cita del día.
 
 ### API Externa
 
-- **ZenQuotes API** - `https://zenquotes.io/api/`
-  - Límite: 5 requests/30s por IP
-  - Fallback: Citas mock locales
+- **ZenQuotes API** — `https://zenquotes.io/api/`
+  - Estructura de endpoints utilizada: `https://zenquotes.io/api/[mode]/[API_KEY]?keyword=...`
+  - Límite por defecto: 5 requests/30s por IP (se recomienda cache y uso prudente).
+  - Fallback: Citas mock locales para robustez en caso de fallo o límite.
 
 ## 🍪 Funcionalidad de Cookies
 
@@ -169,7 +180,9 @@ La aplicación utiliza cookies para recordar la última palabra clave selecciona
 
 ### Variables de Entorno
 
-No se requieren variables de entorno para la funcionalidad básica.
+- `ZENQUOTES_API_KEY` (opcional pero recomendado): tu API key de ZenQuotes.
+  - Local: definir en `.env.local`.
+  - Vercel: añadir como Environment Variable en el panel del proyecto.
 
 ## 📄 Licencia
 
