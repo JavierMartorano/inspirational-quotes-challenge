@@ -37,7 +37,7 @@ export type QuoteKeyword =
   | 'disciplina' | 'límites' | 'persistencia' | 'limitaciones' 
   | 'actitud' | 'excelencia' | 'inspirational'
 
-// Función para transformar respuesta de ZenQuotes a nuestra interfaz
+// Función para transformar respuesta de ZenQuotes a mi interfaz
 export function transformZenQuote(zenQuote: ZenQuoteResponse, category: QuoteKeyword = 'inspirational', id?: number): Quote {
   return {
     id: id || Math.floor(Math.random() * 10000),
@@ -50,9 +50,9 @@ export function transformZenQuote(zenQuote: ZenQuoteResponse, category: QuoteKey
 /**
  * Servicio para obtener citas usando API routes internas (evita CORS)
  * 
- * Este servicio actúa como un wrapper para las API routes de Next.js,
+ * Este servicio actúa como un wrapper para mis API routes de Next.js,
  * proporcionando métodos para obtener citas de diferentes formas:
- * - Por palabra clave (hasta 50 citas, mostramos 10)
+ * - Por palabra clave (hasta 50 citas, muestro 10)
  * - Cita del día
  * - Citas aleatorias
  * 
@@ -62,7 +62,7 @@ export class ZenQuotesService {
   private static readonly config: ServiceConfig = {
     timeout: 10000, // 10 segundos - tiempo límite para requests HTTP
     maxRetries: 2,   // número de reintentos en caso de fallo
-    baseUrl: '/api'  // base URL para las API routes internas
+    baseUrl: '/api'  // base URL para mis API routes internas
   }
 
   /**
@@ -72,10 +72,10 @@ export class ZenQuotesService {
    * @returns Promise<ApiResponse<Quote[]>> - Respuesta con array de citas o error
    * 
    * Comportamiento:
-   * - Hace request a /api/quotes con el parámetro keyword
+   * - Hago request a /api/quotes con el parámetro keyword
    * - Timeout de 10 segundos con AbortController
-   * - En caso de error, devuelve mockQuotes filtradas como fallback
-   * - Transforma las respuestas de ZenQuotes a nuestro formato Quote
+   * - En caso de error, devuelvo mockQuotes filtradas como fallback
+   * - Transformo las respuestas de ZenQuotes a mi formato Quote
    */
   static async getQuotesByKeyword(keyword: QuoteKeyword): Promise<ApiResponse<Quote[]>> {
     try {
@@ -127,9 +127,9 @@ export class ZenQuotesService {
    * @returns Promise<Quote> - La cita del día
    * 
    * Comportamiento:
-   * - Hace request a /api/qod (Quote of the Day)
+   * - Hago request a /api/qod (Quote of the Day)
    * - Timeout de 10 segundos
-   * - En caso de error, devuelve una cita aleatoria de mockQuotes
+   * - En caso de error, devuelvo una cita aleatoria de mockQuotes
    * - La cita del día es la misma durante todo el día
    */
   static async getQuoteOfTheDay(): Promise<Quote> {
@@ -177,9 +177,9 @@ export class ZenQuotesService {
    * @returns Promise<Quote[]> - Array de citas aleatorias
    * 
    * Comportamiento:
-   * - Obtiene citas completamente aleatorias
+   * - Obtengo citas completamente aleatorias
    * - Timeout de 10 segundos
-   * - En caso de error, devuelve mockQuotes aleatorias como fallback
+   * - En caso de error, devuelvo mockQuotes aleatorias como fallback
    */
   static async getRandomQuotes(): Promise<Quote[]> {
     try {
