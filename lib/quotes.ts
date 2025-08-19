@@ -1,22 +1,44 @@
 // Interfaz para las citas compatible con ZenQuotes API
 export interface Quote {
-  id: number
-  text: string // 'q' en la API de ZenQuotes
-  author: string // 'a' en la API de ZenQuotes
-  category: string // keyword usada para la búsqueda
+  readonly id: number
+  readonly text: string // 'q' en la API de ZenQuotes
+  readonly author: string // 'a' en la API de ZenQuotes
+  readonly category: string // keyword usada para la búsqueda
 }
 
 // Interfaz para la respuesta de ZenQuotes API
 export interface ZenQuoteResponse {
-  q: string // quote text
-  a: string // author
-  i: string // image (opcional)
-  c: string // character count
-  h: string // html (opcional)
+  readonly q: string // quote text
+  readonly a: string // author
+  readonly i?: string // image (opcional)
+  readonly c: string // character count
+  readonly h?: string // html (opcional)
 }
 
+// Interfaz para respuestas de API con manejo de errores
+export interface ApiResponse<T> {
+  readonly success: boolean
+  readonly data?: T
+  readonly error?: string
+  readonly timestamp: number
+}
+
+// Interfaz para configuración de servicio
+export interface ServiceConfig {
+  readonly timeout: number
+  readonly maxRetries: number
+  readonly baseUrl: string
+}
+
+// Tipo para keywords válidas
+export type QuoteKeyword = 
+  | 'éxito' | 'acción' | 'trabajo' | 'sueños' | 'crecimiento' 
+  | 'hábitos' | 'oportunidad' | 'fracaso' | 'autoestima' 
+  | 'disciplina' | 'límites' | 'persistencia' | 'limitaciones' 
+  | 'actitud' | 'excelencia' | 'inspirational'
+
 // Función para transformar respuesta de ZenQuotes a nuestra interfaz
-export function transformZenQuote(zenQuote: ZenQuoteResponse, category: string = 'inspirational', id?: number): Quote {
+export function transformZenQuote(zenQuote: ZenQuoteResponse, category: QuoteKeyword = 'inspirational', id?: number): Quote {
   return {
     id: id || Math.floor(Math.random() * 10000),
     text: zenQuote.q,
@@ -25,18 +47,43 @@ export function transformZenQuote(zenQuote: ZenQuoteResponse, category: string =
   }
 }
 
-// Servicio para obtener citas usando API routes internas (evita CORS)
+/**
+ * Servicio para obtener citas usando API routes internas (evita CORS)
+ * 
+ * Este servicio actúa como un wrapper para las API routes de Next.js,
+ * proporcionando métodos para obtener citas de diferentes formas:
+ * - Por palabra clave (hasta 50 citas, mostramos 10)
+ * - Cita del día
+ * - Citas aleatorias
+ * 
+ * Incluye manejo de errores, timeouts y fallbacks a datos mock
+ */
 export class ZenQuotesService {
-  private static readonly TIMEOUT = 10000 // 10 segundos
+  private static readonly config: ServiceConfig = {
+    timeout: 10000, // 10 segundos - tiempo límite para requests HTTP
+    maxRetries: 2,   // número de reintentos en caso de fallo
+    baseUrl: '/api'  // base URL para las API routes internas
+  }
 
-  // Obtener citas por keyword usando API route interna
-  static async getQuotesByKeyword(keyword: string): Promise<Quote[]> {
+  /**
+   * Obtiene citas relacionadas con una palabra clave específica
+   * 
+   * @param keyword - La palabra clave para filtrar las citas
+   * @returns Promise<ApiResponse<Quote[]>> - Respuesta con array de citas o error
+   * 
+   * Comportamiento:
+   * - Hace request a /api/quotes con el parámetro keyword
+   * - Timeout de 10 segundos con AbortController
+   * - En caso de error, devuelve mockQuotes filtradas como fallback
+   * - Transforma las respuestas de ZenQuotes a nuestro formato Quote
+   */
+  static async getQuotesByKeyword(keyword: QuoteKeyword): Promise<ApiResponse<Quote[]>> {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT)
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
 
       // Usar API route interna que llama a ZenQuotes desde el servidor
-      const response = await fetch(`/api/quotes?keyword=${encodeURIComponent(keyword)}`, {
+      const response = await fetch(`${this.config.baseUrl}/quotes?keyword=${encodeURIComponent(keyword)}`, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
@@ -50,32 +97,45 @@ export class ZenQuotesService {
       }
 
       const quotes: Quote[] = await response.json()
-      return quotes
+      return {
+        success: true,
+        data: quotes,
+        timestamp: Date.now()
+      }
     } catch (error) {
       console.error('Error fetching quotes by keyword:', error)
       // Fallback a mockQuotes filtradas por keyword
       const fallbackQuotes = mockQuotes
         .filter(quote => 
-          quote.text.toLowerCase().includes(keyword.toLowerCase()) ||
-          quote.author.toLowerCase().includes(keyword.toLowerCase()) ||
-          quote.category.toLowerCase().includes(keyword.toLowerCase())
+          quote.category.toLowerCase().includes(keyword.toLowerCase()) ||
+          quote.text.toLowerCase().includes(keyword.toLowerCase())
         )
         .slice(0, 10)
       
-      if (fallbackQuotes.length > 0) {
-        return fallbackQuotes
+      return {
+        success: false,
+        data: fallbackQuotes,
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        timestamp: Date.now()
       }
-      
-      // Si no hay coincidencias, devolver algunas mockQuotes aleatorias
-      return mockQuotes.slice(0, 10).map(quote => ({ ...quote, category: keyword }))
     }
   }
 
-  // Obtener cita del día usando API route interna (con cache automático)
+  /**
+   * Obtiene la cita del día desde la API
+   * 
+   * @returns Promise<Quote> - La cita del día
+   * 
+   * Comportamiento:
+   * - Hace request a /api/qod (Quote of the Day)
+   * - Timeout de 10 segundos
+   * - En caso de error, devuelve una cita aleatoria de mockQuotes
+   * - La cita del día es la misma durante todo el día
+   */
   static async getQuoteOfTheDay(): Promise<Quote> {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT)
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
 
       const response = await fetch('/api/qod', {
         signal: controller.signal,
@@ -111,11 +171,20 @@ export class ZenQuotesService {
     }
   }
 
-  // Obtener citas aleatorias para la landing
+  /**
+   * Obtiene citas aleatorias de diferentes categorías
+   * 
+   * @returns Promise<Quote[]> - Array de citas aleatorias
+   * 
+   * Comportamiento:
+   * - Obtiene citas completamente aleatorias
+   * - Timeout de 10 segundos
+   * - En caso de error, devuelve mockQuotes aleatorias como fallback
+   */
   static async getRandomQuotes(): Promise<Quote[]> {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT)
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
 
       const response = await fetch('/api/quotes', {
         signal: controller.signal,

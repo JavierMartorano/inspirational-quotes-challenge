@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
           quote.q.toLowerCase().includes(keyword.toLowerCase()) ||
           quote.a.toLowerCase().includes(keyword.toLowerCase())
         )
-        .slice(0, 10) // Mostrar solo 10 como especifica el requisito
+        .slice(0, 10)
         .map((zenQuote, index) => transformZenQuote(zenQuote, keyword, index + 1))
       
       // Si no hay citas filtradas, devolver algunas aleatorias con la keyword como categoría

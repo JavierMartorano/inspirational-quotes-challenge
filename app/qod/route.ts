@@ -6,7 +6,7 @@ export async function GET() {
     // Obtener la URL base correcta
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3001' // Puerto local correcto
+      : 'http://localhost:3000' // Puerto local correcto
     
     // Llamar a nuestra API interna que ya maneja el cache
     const response = await fetch(`${baseUrl}/api/qod`, {
