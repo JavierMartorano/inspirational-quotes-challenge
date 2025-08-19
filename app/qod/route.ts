@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // Route handler que devuelve la quote of the day en texto plano
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Obtener la URL base correcta
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000' // Puerto local correcto
+    // Construir baseUrl dinámicamente desde la request para evitar puertos hardcodeados
+    const protocol = request.headers.get('x-forwarded-proto') || 'http'
+    const host = request.headers.get('host') || 'localhost:3001'
+    const baseUrl = `${protocol}://${host}`
     
     // Llamar a nuestra API interna que ya maneja el cache
     const response = await fetch(`${baseUrl}/api/qod`, {

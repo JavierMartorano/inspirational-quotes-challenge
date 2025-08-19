@@ -142,26 +142,7 @@ export function QuoteOfTheDay() {
             {/* Botones solo si no está cargando y hay una cita */}
             {!isLoading && currentQuote && (
               <div className="flex flex-wrap justify-center gap-4">
-                <Button 
-                  onClick={getRandomQuote} 
-                  className="flex items-center gap-2" 
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  {isLoading ? 'Cargando...' : 'Nueva Cita'}
-                </Button>
-
-                <Button
-                  variant={isLiked ? "default" : "outline"}
-                  onClick={() => setIsLiked(!isLiked)}
-                  className="flex items-center gap-2"
-                  size="lg"
-                >
-                  <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-                  Like
-                </Button>
-
+                {/* Solo botón Compartir para simplificar la UI */}
                 <Button
                   variant="outline"
                   onClick={handleShare}

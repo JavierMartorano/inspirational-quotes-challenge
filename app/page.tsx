@@ -71,17 +71,15 @@ export default function HomePage() {
           "inspiration",
         ]
           .filter((k) => k !== lastKeyword)
-          .slice(0, 4); // Solo 4 más para tener 5 total
+          .slice(0, 4);
 
-        const randomQuotes = await ZenQuotesService.getRandomQuotes(
-          otherKeywords
-        );
+        // Cambiamos a getRandomQuotes() sin argumentos, para mantenerlo simple
+        const randomQuotes = await ZenQuotesService.getRandomQuotes();
 
-        // Combinar: primera cita de la keyword guardada + citas aleatorias
         const allQuotes = firstQuote
           ? [firstQuote, ...randomQuotes]
           : randomQuotes;
-        setQuotes(allQuotes.slice(0, 6)); // Máximo 6 citas
+        setQuotes(allQuotes.slice(0, 6));
       } else {
         // Si no hay keyword guardada, obtener citas aleatorias
         const randomQuotes = await ZenQuotesService.getRandomQuotes();

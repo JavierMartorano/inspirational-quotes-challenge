@@ -34,7 +34,9 @@ export async function GET() {
     }
     
     // Llamar a ZenQuotes API para obtener quote of the day
-    const response = await fetch('https://zenquotes.io/api/today', {
+    const apiKey = process.env.ZENQUOTES_API_KEY
+    const base = apiKey ? `https://zenquotes.io/api/today/${apiKey}` : 'https://zenquotes.io/api/today'
+    const response = await fetch(base, {
       headers: {
         'Accept': 'application/json',
       }
