@@ -16,7 +16,7 @@ interface Quote {
   category: string
 }
 
-// Función para transformar respuesta de ZenQuotes a nuestra interfaz
+// Función para transformar respuesta de ZenQuotes a mi interfaz
 function transformZenQuote(zenQuote: ZenQuoteResponse, category: string = 'inspirational', id?: number): Quote {
   return {
     id: id || Math.floor(Math.random() * 10000),

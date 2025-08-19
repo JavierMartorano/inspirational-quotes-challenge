@@ -8,7 +8,7 @@ export async function GET() {
       ? `https://${process.env.VERCEL_URL}` 
       : 'http://localhost:3000' // Puerto local correcto
     
-    // Llamar a nuestra API interna que ya maneja el cache
+    // Llamar a mi API interna que ya maneja el cache
     const response = await fetch(`${baseUrl}/api/qod`, {
       cache: 'no-store' // Permitir que la API maneje su propio cache
     })
