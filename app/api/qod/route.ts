@@ -16,7 +16,7 @@ interface ZenQuoteResponse {
  */
 export async function GET() {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const cachedQod = cookieStore.get('qod_cache')
     const cacheDate = cookieStore.get('qod_date')
     
@@ -33,19 +33,47 @@ export async function GET() {
       })
     }
     
-    // Llamar a ZenQuotes API para obtener quote of the day
+    // Obtener API key desde variables de entorno
     const apiKey = process.env.ZENQUOTES_API_KEY
-    const base = apiKey ? `https://zenquotes.io/api/today/${apiKey}` : 'https://zenquotes.io/api/today'
+    
+    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+      console.warn('⚠️ ZENQUOTES_API_KEY no configurada. Usando cita del día por defecto.')
+      
+      // Cita del día por defecto
+      const fallbackQuote = '"The only way to do great work is to love what you do." - Steve Jobs'
+      
+      // Guardar en cache
+       const cookieStore = await cookies()
+       cookieStore.set('qod_cache', fallbackQuote, { 
+         maxAge: 24 * 60 * 60, // 24 horas
+         httpOnly: true 
+       })
+       cookieStore.set('qod_date', today, { 
+         maxAge: 24 * 60 * 60, // 24 horas
+         httpOnly: true 
+       })
+      
+      return new NextResponse(fallbackQuote, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600', // Cache por 1 hora
+        },
+      })
+    }
+    
+    // Llamar a ZenQuotes API para obtener quote of the day
+    const base = `https://zenquotes.io/api/today/${apiKey}`
     const response = await fetch(base, {
       headers: {
         'Accept': 'application/json',
       }
     })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const zenQuotes: ZenQuoteResponse[] = await response.json()
     
     if (!zenQuotes || zenQuotes.length === 0) {

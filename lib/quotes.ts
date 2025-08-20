@@ -67,23 +67,24 @@ export class ZenQuotesService {
 
   /**
    * Obtiene citas relacionadas con una palabra clave específica
+   * Usa la nueva API /api/keyword/[keyword] que sigue la documentación oficial de ZenQuotes
    * 
    * @param keyword - La palabra clave para filtrar las citas
-   * @returns Promise<ApiResponse<Quote[]>> - Respuesta con array de citas o error
+   * @returns Promise<ApiResponse<Quote[]>> - Respuesta con hasta 50 citas (mostramos 10 en modal)
    * 
    * Comportamiento:
-   * - Hace request a /api/quotes con el parámetro keyword
+   * - Hace request a /api/keyword/[keyword] que usa ZenQuotes oficial
+   * - Endpoint: https://zenquotes.io/api/quotes/[YOUR_API_KEY]&keyword=[keyword]
    * - Timeout de 10 segundos con AbortController
    * - En caso de error, devuelve mockQuotes filtradas como fallback
-   * - Transforma las respuestas de ZenQuotes a nuestro formato Quote
    */
-  static async getQuotesByKeyword(keyword: QuoteKeyword): Promise<ApiResponse<Quote[]>> {
+  static async getQuotesByKeyword(keyword: string): Promise<ApiResponse<Quote[]>> {
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
 
-      // Usar API route interna que llama a ZenQuotes desde el servidor
-      const response = await fetch(`${this.config.baseUrl}/quotes?keyword=${encodeURIComponent(keyword)}`, {
+      // Usar nueva API route que sigue documentación oficial de ZenQuotes
+      const response = await fetch(`${this.config.baseUrl}/keyword/${encodeURIComponent(keyword)}`, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
@@ -96,11 +97,13 @@ export class ZenQuotesService {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const quotes: Quote[] = await response.json()
+      const apiResponse = await response.json()
+      
+      // La nueva API ya devuelve el formato correcto
       return {
-        success: true,
-        data: quotes,
-        timestamp: Date.now()
+        success: apiResponse.success,
+        data: apiResponse.data || [],
+        timestamp: apiResponse.timestamp
       }
     } catch (error) {
       console.error('Error fetching quotes by keyword:', error)
@@ -118,6 +121,48 @@ export class ZenQuotesService {
         error: error instanceof Error ? error.message : 'Error desconocido',
         timestamp: Date.now()
       }
+    }
+  }
+
+  /**
+   * Obtiene todas las keywords disponibles desde ZenQuotes API
+   * Usa la nueva API /api/keywords que sigue la documentación oficial
+   * 
+   * @returns Promise<string[]> - Array de keywords disponibles
+   * 
+   * Comportamiento:
+   * - Hace request a /api/keywords que usa ZenQuotes oficial
+   * - Endpoint: https://zenquotes.io/api/keywords/[YOUR_API_KEY]
+   * - En caso de error, devuelve keywords por defecto como fallback
+   */
+  static async getAllKeywords(): Promise<string[]> {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
+
+      const response = await fetch(`${this.config.baseUrl}/keywords`, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const apiResponse = await response.json()
+      return apiResponse.data || []
+    } catch (error) {
+      console.error('Error fetching keywords:', error)
+      // Fallback a keywords por defecto
+      return [
+        'love', 'happiness', 'success', 'motivation', 'inspiration',
+        'wisdom', 'life', 'friendship', 'courage', 'hope',
+        'dreams', 'change', 'leadership', 'creativity', 'peace'
+      ]
     }
   }
 

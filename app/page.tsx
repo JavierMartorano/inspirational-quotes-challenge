@@ -38,58 +38,78 @@ export default function HomePage() {
   }, []);
 
   /**
-   * Carga las citas iniciales al montar el componente
+   * Carga las citas iniciales según la documentación oficial de ZenQuotes
    * 
-   * Lógica:
-   * 1. Si existe una keyword en cookies, muestra una cita de esa categoría primero
-   * 2. Completa con citas aleatorias de otras categorías
-   * 3. Si no hay cookie, muestra solo citas aleatorias
-   * 4. En caso de error, usa mockQuotes como fallback
+   * Lógica nueva (según documentación):
+   * 1. Obtener todas las keywords desde /api/keywords
+   * 2. Si existe lastSelectedKeyword en cookies, usarla como primera keyword
+   * 3. Seleccionar 3 keywords (1 de cookie + 2 aleatorias, o 3 aleatorias)
+   * 4. Para cada keyword, obtener 50 citas y mostrar solo 1 en cada brick
+   * 5. Guardar las 50 citas de cada keyword para usar en modales
    */
   const loadInitialQuotes = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Verificar si hay una keyword guardada en cookies
-      const lastKeyword = getLastSelectedKeyword();
+      console.log('🔄 Iniciando carga de citas según documentación oficial...');
 
-      if (lastKeyword) {
-        // Si hay keyword guardada, obtener una cita de esa keyword primero
-        const keywordQuotes = await ZenQuotesService.getQuotesByKeyword(
-          lastKeyword
-        );
-        const firstQuote = keywordQuotes.length > 0 ? keywordQuotes[0] : null;
+      // 1. Obtener todas las keywords disponibles
+      const allKeywords = await ZenQuotesService.getAllKeywords();
+      console.log(`📋 Keywords obtenidas: ${allKeywords.length}`);
 
-        // Obtener citas aleatorias de otras keywords
-        const otherKeywords = [
-          "success",
-          "motivation",
-          "life",
-          "wisdom",
-          "happiness",
-          "inspiration",
-        ]
-          .filter((k) => k !== lastKeyword)
-          .slice(0, 4);
-
-        // Cambiamos a getRandomQuotes() sin argumentos, para mantenerlo simple
-        const randomQuotes = await ZenQuotesService.getRandomQuotes();
-
-        const allQuotes = firstQuote
-          ? [firstQuote, ...randomQuotes]
-          : randomQuotes;
-        setQuotes(allQuotes.slice(0, 6));
-      } else {
-        // Si no hay keyword guardada, obtener citas aleatorias
-        const randomQuotes = await ZenQuotesService.getRandomQuotes();
-        setQuotes(randomQuotes.slice(0, 6));
+      if (allKeywords.length === 0) {
+        throw new Error('No se pudieron obtener keywords');
       }
+
+      // 2. Verificar si hay una keyword guardada en cookies
+      const lastKeyword = getLastSelectedKeyword();
+      
+      // 3. Seleccionar 3 keywords para los bricks
+      let selectedKeywords: string[] = [];
+      
+      if (lastKeyword && allKeywords.includes(lastKeyword)) {
+        // Si hay keyword guardada, usarla como primera
+        selectedKeywords.push(lastKeyword);
+        
+        // Agregar 2 keywords aleatorias diferentes
+        const remainingKeywords = allKeywords.filter(k => k !== lastKeyword);
+        const shuffled = remainingKeywords.sort(() => Math.random() - 0.5);
+        selectedKeywords.push(...shuffled.slice(0, 2));
+      } else {
+        // Si no hay cookie, seleccionar 3 keywords aleatorias
+        const shuffled = allKeywords.sort(() => Math.random() - 0.5);
+        selectedKeywords = shuffled.slice(0, 3);
+      }
+
+      console.log(`🎯 Keywords seleccionadas: ${selectedKeywords.join(', ')}`);
+
+      // 4. Para cada keyword, obtener 50 citas y mostrar solo 1
+      const quotesForBricks: Quote[] = [];
+      
+      for (const keyword of selectedKeywords) {
+        const response = await ZenQuotesService.getQuotesByKeyword(keyword);
+        const keywordQuotes = response.data || [];
+        
+        if (keywordQuotes.length > 0) {
+          // Tomar la primera cita para mostrar en el brick
+          quotesForBricks.push(keywordQuotes[0]);
+          console.log(`✅ Cita obtenida para "${keyword}": ${keywordQuotes.length} citas disponibles`);
+        }
+      }
+
+      if (quotesForBricks.length === 0) {
+        throw new Error('No se pudieron obtener citas para ninguna keyword');
+      }
+
+      setQuotes(quotesForBricks);
+      console.log(`🎉 Carga completada: ${quotesForBricks.length} citas mostradas`);
+      
     } catch (err) {
-      console.error("Error loading quotes:", err);
+      console.error("❌ Error loading quotes:", err);
       setError("Error al cargar las citas. Mostrando contenido de respaldo.");
       // Usar mockQuotes como fallback
-      setQuotes(mockQuotes.slice(0, 6));
+      setQuotes(mockQuotes.slice(0, 3));
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +185,7 @@ export default function HomePage() {
       </section>
 
       {/* Quotes Grid */}
-      <section className="py-16 px-4">
+      <section className="px-4">
         <div className="container mx-auto">
           {/* Mostrar error si existe */}
           {error && (
