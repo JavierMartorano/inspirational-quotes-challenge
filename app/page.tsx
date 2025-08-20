@@ -31,6 +31,9 @@ export default function HomePage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estado para almacenar las 50 citas de cada keyword (para los modales)
+  const [quotesStorage, setQuotesStorage] = useState<{ [key: string]: Quote[] }>({});
 
   // Cargar citas iniciales al montar el componente
   useEffect(() => {
@@ -38,58 +41,63 @@ export default function HomePage() {
   }, []);
 
   /**
-   * Carga las citas iniciales al montar el componente
+   * Carga las citas iniciales usando el NUEVO FLUJO PRINCIPAL
    * 
-   * Lógica:
-   * 1. Si existe una keyword en cookies, muestra una cita de esa categoría primero
-   * 2. Completa con citas aleatorias de otras categorías
-   * 3. Si no hay cookie, muestra solo citas aleatorias
-   * 4. En caso de error, usa mockQuotes como fallback
+   * FLUJO CORRECTO:
+   * 1. Obtiene TODAS las keywords desde ZenQuotes.io
+   * 2. Elige 3 keywords aleatorias
+   * 3. Obtiene 50 citas para cada keyword (total: 150 citas)
+   * 4. Muestra 1 cita de cada keyword (total: 3 citas en la landing)
+   * 5. Guarda las 50 citas de cada keyword para el modal
    */
   const loadInitialQuotes = async () => {
     try {
+      console.log('🚀 Iniciando NUEVO FLUJO: keywords → 3 aleatorias → 50 citas c/u...');
       setIsLoading(true);
       setError(null);
 
-      // Verificar si hay una keyword guardada en cookies
+      // NUEVO FLUJO: Obtener keywords, elegir 3 aleatorias, obtener 50 citas de cada una
+      const keywordQuotesData = await ZenQuotesService.getInitialQuotesWithKeywords();
+      
+      console.log('📊 Datos obtenidos:', keywordQuotesData.map(item => `${item.keyword}: ${item.quotes.length} citas`));
+      
+      // Guardar todas las citas por keyword para usar en los modales
+      const quotesStorage: { [key: string]: Quote[] } = {};
+      const displayQuotes: Quote[] = [];
+      
+      keywordQuotesData.forEach(item => {
+        // Guardar las 50 citas para el modal
+        quotesStorage[item.keyword] = item.quotes;
+        
+        // Tomar 1 cita aleatoria para mostrar en la landing
+        if (item.quotes.length > 0) {
+          const randomIndex = Math.floor(Math.random() * item.quotes.length);
+          displayQuotes.push(item.quotes[randomIndex]);
+        }
+      });
+      
+      // Guardar las citas en el estado para los modales
+      setQuotesStorage(quotesStorage);
+      
+      // Verificar si hay una keyword guardada en cookies para priorizar
       const lastKeyword = getLastSelectedKeyword();
-
-      if (lastKeyword) {
-        // Si hay keyword guardada, obtener una cita de esa keyword primero
-        const keywordQuotes = await ZenQuotesService.getQuotesByKeyword(
-          lastKeyword
-        );
-        const firstQuote = keywordQuotes.length > 0 ? keywordQuotes[0] : null;
-
-        // Obtener citas aleatorias de otras keywords
-        const otherKeywords = [
-          "success",
-          "motivation",
-          "life",
-          "wisdom",
-          "happiness",
-          "inspiration",
-        ]
-          .filter((k) => k !== lastKeyword)
-          .slice(0, 4);
-
-        // Cambiamos a getRandomQuotes() sin argumentos, para mantenerlo simple
-        const randomQuotes = await ZenQuotesService.getRandomQuotes();
-
-        const allQuotes = firstQuote
-          ? [firstQuote, ...randomQuotes]
-          : randomQuotes;
-        setQuotes(allQuotes.slice(0, 6));
+      if (lastKeyword && quotesStorage[lastKeyword]) {
+        console.log(`🍪 Priorizando keyword guardada: ${lastKeyword}`);
+        // Mover la cita de la keyword guardada al principio
+        const priorityQuote = quotesStorage[lastKeyword][0];
+        const otherQuotes = displayQuotes.filter(q => q.category !== lastKeyword);
+        setQuotes([priorityQuote, ...otherQuotes.slice(0, 2)]);
       } else {
-        // Si no hay keyword guardada, obtener citas aleatorias
-        const randomQuotes = await ZenQuotesService.getRandomQuotes();
-        setQuotes(randomQuotes.slice(0, 6));
+        setQuotes(displayQuotes.slice(0, 3));
       }
+      
+      console.log('✅ Flujo principal completado. Mostrando 3 citas de diferentes keywords.');
+      
     } catch (err) {
-      console.error("Error loading quotes:", err);
+      console.error("❌ Error en flujo principal:", err);
       setError("Error al cargar las citas. Mostrando contenido de respaldo.");
       // Usar mockQuotes como fallback
-      setQuotes(mockQuotes.slice(0, 6));
+      setQuotes(mockQuotes.slice(0, 3));
     } finally {
       setIsLoading(false);
     }
@@ -100,11 +108,12 @@ export default function HomePage() {
    * 
    * @param category - La categoría/keyword de la cita seleccionada
    * 
-   * Funcionalidad:
+   * NUEVA FUNCIONALIDAD:
    * 1. Guarda la keyword en cookies para recordarla
-   * 2. Obtiene hasta 50 citas de esa categoría desde la API
+   * 2. Usa las 50 citas YA OBTENIDAS y almacenadas en quotesStorage
    * 3. Muestra solo las primeras 10 en el modal
-   * 4. En caso de error, usa mockQuotes filtradas como fallback
+   * 4. Si no hay citas almacenadas, obtiene 50 nuevas desde la API
+   * 5. En caso de error, usa mockQuotes filtradas como fallback
    */
   const handleMoreClick = async (category: string) => {
     try {
@@ -114,18 +123,31 @@ export default function HomePage() {
       // Guardar la keyword seleccionada en cookies para próximas visitas
       setLastSelectedKeyword(category);
 
-      // Obtener hasta 50 citas de la keyword y mostrar solo 10
-      const response = await ZenQuotesService.getQuotesByKeyword(
-        category
-      );
+      console.log(`🔍 Mostrando citas para: ${category}`);
       
-      // Extraer las quotes del ApiResponse
-      const categoryQuotes = response.data || [];
-      setModalQuotes(categoryQuotes.slice(0, 10));
+      // NUEVA LÓGICA: Usar las citas ya almacenadas en quotesStorage
+      if (quotesStorage[category] && quotesStorage[category].length > 0) {
+        console.log(`✅ Usando ${quotesStorage[category].length} citas almacenadas para '${category}'`);
+        // Mostrar 10 de las 50 citas ya obtenidas
+        setModalQuotes(quotesStorage[category].slice(0, 10));
+      } else {
+        console.log(`🔄 No hay citas almacenadas para '${category}', obteniendo nuevas...`);
+        // Fallback: obtener 50 citas nuevas si no están en storage
+        const newQuotes = await ZenQuotesService.get50QuotesByKeyword(category);
+        
+        // Actualizar el storage con las nuevas citas
+        setQuotesStorage(prev => ({
+          ...prev,
+          [category]: newQuotes
+        }));
+        
+        // Mostrar 10 de las 50 citas obtenidas
+        setModalQuotes(newQuotes.slice(0, 10));
+      }
 
       setIsModalOpen(true);
     } catch (err) {
-      console.error("Error loading category quotes:", err);
+      console.error("❌ Error loading category quotes:", err);
       // Usar mockQuotes filtradas como fallback
       const fallbackQuotes = mockQuotes
         .filter((quote) => quote.category === category)
@@ -138,13 +160,42 @@ export default function HomePage() {
   };
 
   /**
-   * Muestra 3 citas adicionales en la landing (paginación simple)
+   * Carga 3 citas completamente nuevas con keywords diferentes
    */
-  const handleViewMoreQuotes = () => {
-    setQuotesToShow((prev) => Math.min(prev + 3, quotes.length));
+  const handleViewMoreQuotes = async () => {
+    try {
+      // Obtener 3 nuevas citas con keywords diferentes
+      const newQuotesData = await ZenQuotesService.getInitialQuotesWithKeywords();
+      
+      // Extraer una cita por keyword (3 citas nuevas)
+      const newQuotes = newQuotesData.map(item => item.quotes[0]).filter(Boolean);
+      
+      // Agregar las nuevas citas a las existentes
+      setQuotes(prev => [...prev, ...newQuotes]);
+      
+      // Actualizar el storage con todas las citas de las nuevas keywords
+      const newStorage: Record<string, Quote[]> = {};
+      newQuotesData.forEach(item => {
+        newStorage[item.keyword] = item.quotes;
+      });
+      
+      setQuotesStorage(prev => ({ ...prev, ...newStorage }));
+      
+      console.log(`✅ Agregadas ${newQuotes.length} citas nuevas`);
+      
+    } catch (err) {
+      console.error('❌ Error cargando más citas:', err);
+      // Fallback: agregar 3 mockQuotes aleatorias
+      const randomMockQuotes = mockQuotes
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+      setQuotes(prev => [...prev, ...randomMockQuotes]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const displayedQuotes = quotes.slice(0, quotesToShow);
+  const displayedQuotes = quotes;
 
   return (
     <div className="min-h-screen">
@@ -196,7 +247,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {!isLoading && quotesToShow < quotes.length && (
+          {!isLoading && (
             <div className="text-center mt-12">
               <Button
                 onClick={handleViewMoreQuotes}
