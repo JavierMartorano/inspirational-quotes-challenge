@@ -216,7 +216,7 @@ export default function HomePage() {
       </section>
 
       {/* Quotes Grid */}
-      <section className="py-16 px-4">
+      <section className="px-4">
         <div className="container mx-auto">
           {/* Mostrar error si existe */}
           {error && (
@@ -248,7 +248,7 @@ export default function HomePage() {
           )}
 
           {!isLoading && (
-            <div className="text-center mt-12">
+            <div className="text-center mt-12 mb-12">
               <Button
                 onClick={handleViewMoreQuotes}
                 size="lg"
