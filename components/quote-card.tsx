@@ -12,25 +12,12 @@ import { Quote } from "@/lib/quotes"
 interface QuoteCardProps {
   /** La cita a mostrar con su texto, autor y categoría */
   quote: Quote
-  /** La palabra clave/categoría de la cita */
-  keyword: string
   /** Función callback que se ejecuta al hacer clic en "Más" */
   onMoreClick: (keyword: string) => void
 }
 
-/**
- * Componente QuoteCard - Tarjeta individual para mostrar una cita inspiracional
- * 
- * Características:
- * - Memoizado con React.memo() para evitar re-renders innecesarios
- * - Diseño responsive con hover effects
- * - Botón "Más" para ver citas relacionadas de la misma categoría
- * - Altura mínima fija para mantener consistencia visual
- * 
- * @param props - Las propiedades del componente
- * @returns JSX.Element - La tarjeta de cita renderizada
- */
-export const QuoteCard = React.memo(function QuoteCard({ quote, keyword, onMoreClick }: QuoteCardProps) {
+export const QuoteCard = React.memo(function QuoteCard({ quote, onMoreClick }: QuoteCardProps) {
+  const keyword = quote.category
   return (
     <Card className="h-full min-h-[280px] transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
       <CardContent className="p-6 h-full flex flex-col">

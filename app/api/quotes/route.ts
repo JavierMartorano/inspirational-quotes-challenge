@@ -75,9 +75,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const keyword = searchParams.get('keyword')
+
+    // Leer API key opcional desde variables de entorno
+    const apiKey = process.env.ZENQUOTES_API_KEY
+    const base = apiKey ? `https://zenquotes.io/api/quotes/${apiKey}` : 'https://zenquotes.io/api/quotes'
     
     // Llamar a ZenQuotes API desde el servidor para evitar CORS
-    const response = await fetch('https://zenquotes.io/api/quotes', {
+    const endpoint = keyword
+      ? `${base}?keyword=${encodeURIComponent(keyword)}`
+      : base
+
+    const response = await fetch(endpoint, {
       headers: {
         'Accept': 'application/json',
       },
@@ -92,26 +100,19 @@ export async function GET(request: NextRequest) {
     const zenQuotes: ZenQuoteResponse[] = await response.json()
     
     if (keyword) {
-      // Filtrar citas que contengan la keyword
-      const filteredQuotes = zenQuotes
-        .filter(quote => 
-          quote.q.toLowerCase().includes(keyword.toLowerCase()) ||
-          quote.a.toLowerCase().includes(keyword.toLowerCase())
-        )
-        .slice(0, 10)
-        .map((zenQuote, index) => transformZenQuote(zenQuote, keyword, index + 1))
+      // Mostrar solo 10 aunque la API devuelva hasta 50
+      const firstTen = zenQuotes.slice(0, 10)
+      const transformed = firstTen.map((zq, index) => transformZenQuote(zq, keyword, index + 1))
       
-      // Si no hay citas filtradas, devolver algunas aleatorias con la keyword como categoría
-      if (filteredQuotes.length === 0) {
-        const randomQuotes = zenQuotes
-          .slice(0, 10)
-          .map((zenQuote, index) => transformZenQuote(zenQuote, keyword, index + 1))
-        return NextResponse.json(randomQuotes)
+      // Si no hay citas, fallback a aleatorias con categoría keyword
+      if (transformed.length === 0) {
+        const randomTen = zenQuotes.slice(0, 10).map((zq, index) => transformZenQuote(zq, keyword, index + 1))
+        return NextResponse.json(randomTen)
       }
       
-      return NextResponse.json(filteredQuotes)
+      return NextResponse.json(transformed)
     } else {
-      // Devolver todas las citas transformadas para la landing
+      // Devolver todas transformadas para la landing
       const transformedQuotes = zenQuotes.map((zenQuote, index) => 
         transformZenQuote(zenQuote, 'inspirational', index + 1)
       )
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(filteredQuotes)
       }
       
-      // Si no hay coincidencias, devolver algunas mockQuotes aleatorias
+      // Si no hay coincidencias, devolver algunas mockQuotes aleatorias con esa categoría
       return NextResponse.json(
         mockQuotes.slice(0, 10).map(quote => ({ ...quote, category: keyword }))
       )
